@@ -1,5 +1,7 @@
 <template>
-  <v-container>
+  <v-container
+      v-show="show"
+  >
     <v-row
         class="text-center"
     >
@@ -36,18 +38,34 @@
             class="headline font-weight-bold mb-3"
             v-text="`... are you game?`"
         />
+        <br>
         <v-btn
             x-large
             color="primary"
             v-text="`Let's Play!`"
+            @click="dialog = true"
         />
       </v-col>
     </v-row>
+    <Dialog
+        :dialog="dialog"
+        @handleOk="$emit('handleOk'); dialog = false"
+        @handleCancel="dialog = false"
+    />
   </v-container>
 </template>
 
 <script>
+import Dialog from "@/components/dialog/UserDialog";
 export default {
   namespaced: true,
+  components: {Dialog},
+  props: {
+    show: Boolean,
+  },
+
+  data: () => ({
+    dialog: false,
+  }),
 }
 </script>
