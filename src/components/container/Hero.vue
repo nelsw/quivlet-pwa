@@ -40,32 +40,32 @@
         />
         <br>
         <v-btn
+            autofocus
             x-large
             color="primary"
             v-text="`Let's Play!`"
-            @click="dialog = true"
+            @click="userDialog = true"
         />
       </v-col>
     </v-row>
-    <Dialog
-        :dialog="dialog"
-        @handleOk="$emit('handleOk'); dialog = false"
-        @handleCancel="dialog = false"
+    <UserDialog
+        :visible="userDialog"
+        @handleOk="$emit('handleOk', $event); userDialog = false"
+        @handleCancel="userDialog = false"
     />
   </v-container>
 </template>
 
 <script>
-import Dialog from "@/components/dialog/UserDialog";
+import UserDialog from "@/components/dialog/UserDialog";
 export default {
   namespaced: true,
-  components: {Dialog},
+  components: {UserDialog},
   props: {
     show: Boolean,
   },
-
   data: () => ({
-    dialog: false,
+    userDialog: false,
   }),
 }
 </script>

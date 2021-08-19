@@ -3,7 +3,8 @@
       justify="center"
   >
     <v-dialog
-        v-model="dialog"
+        persistent
+        v-model="visible"
         max-width="600px"
     >
       <v-card>
@@ -20,10 +21,13 @@
                   cols="12"
               >
                 <v-text-field
+                    v-model="name"
                     required
+                    autofocus
                     persistent-hint
-                    label="What name should be displayed during the contest?"
-                    hint="... or leave it blank and let us pick a name at random 🙃"
+                    label="What would you like to be called?"
+                    hint="... or leave it blank and we'll pick a random name 🙃"
+                    @keypress.enter="$emit('handleOk', name)"
                 />
               </v-col>
             </v-row>
@@ -38,10 +42,11 @@
           />
           <v-spacer/>
           <v-btn
+              ref="btn"
               x-large
               v-text="`Join the fun!`"
               color="blue darken-1"
-              @click="$emit('handleOk')"
+              @click="$emit('handleOk', name)"
           />
         </v-card-actions>
       </v-card>
@@ -53,7 +58,10 @@
 export default {
   namespaced: true,
   props: {
-    dialog: Boolean,
+    visible: Boolean,
   },
+  data: () => ({
+    name: null,
+  }),
 }
 </script>

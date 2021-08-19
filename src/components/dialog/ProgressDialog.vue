@@ -3,14 +3,14 @@
       persistent
       hide-overlay
       width="300"
-      v-model="dialog"
+      v-model="visible"
   >
     <v-card
         color="primary"
     >
       <v-card-text>
         <span
-            v-text="message"
+            v-text="text"
         />
         <v-progress-linear
             indeterminate
@@ -26,8 +26,8 @@
 export default {
   namespaced: true,
   props: {
-    dialog: Boolean,
-    message: String,
+    visible: Boolean,
+    text: String,
   },
 }
 </script>

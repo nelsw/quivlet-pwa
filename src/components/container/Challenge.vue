@@ -1,6 +1,6 @@
 <template>
   <v-container
-      v-show="show"
+      v-if="item"
   >
     <v-row
         align="center"
@@ -19,16 +19,12 @@
           <v-card-title>
           <span
               class="text-h3"
-              v-text="`Question #${index}`"
+              v-text="`Question #${item.index + 1}`"
           />
-            <v-spacer/>
-            <Countdown
-              @handleTimeExpired="handleTimeExpired"
-            />
           </v-card-title>
           <v-card-subtitle
               class="text-h5 mt-1"
-              v-text="`Category: ${category}`"
+              v-text="`Category: ${item.category}`"
           />
           <v-card-text>
             <v-container>
@@ -44,16 +40,15 @@
                 >
                   <span
                       class="text-h6"
-                      v-text="question"
+                      v-text="item.question"
                   />
                 </v-col>
                 <v-col>
                   <v-radio-group
                       v-model="answer"
-                      :disabled="disabled"
                   >
                     <v-radio
-                        v-for="option in options"
+                        v-for="option in item.incorrect_answers"
                         :key="option"
                         :label="option"
                         :value="option"
@@ -70,29 +65,20 @@
 </template>
 
 <script>
-import Countdown from "@/components/timer/Countdown";
 export default {
-  components: {Countdown},
   namespaced: true,
   props: {
-    show: Boolean,
+    item: Object,
+  },
+  watch: {
+    answer(){
+      if (this.answer) {
+        this.$emit('handleAnswer', this.answer)
+      }
+    },
   },
   data: () => ({
-    disabled: false,
-    index: 1,
-    category: 'Vehicles',
-    question: 'Which of the following passenger jets is the longest?',
-    answer: '',
-    options: [
-      'Airbus A350-1000',
-      'Airbus A330-200',
-      'Boeing 787-10',
-    ]
+    answer: null,
   }),
-  methods: {
-    handleTimeExpired() {
-      this.disabled = true
-    },
-  }
 }
 </script>
