@@ -5,23 +5,22 @@
         app
         right
         clipped
-        stateless
     >
       <v-list
           dense
       >
         <v-list-item
-            v-for="(value, index) in users"
-            :key="index"
+            v-for="u in users"
+            :key="u.id"
         >
           <v-list-item-content>
             <v-list-item-title>
               <v-badge
                   inline
-                  :content="index + 1"
-                  :color="index === 0 ? `success`: value.eliminated ? `danger` : `warning`"
+                  color="transparent"
+                  :content="u.eliminated ? `❌` : `✅`"
               />
-              {{ value.name }}
+              {{ u.name }}
             </v-list-item-title>
           </v-list-item-content>
         </v-list-item>
@@ -82,6 +81,8 @@ export default {
     user() {
       if (this.user.token !== null) {
         this.pollUsers()
+      } else {
+        this.users = []
       }
     },
   },
@@ -90,9 +91,18 @@ export default {
     pollUsers() {
       axios
           .post(url, this.user, {})
-          .then(result => this.users = result.data)
+          .then(result => {
+
+            this.users = result.data
+
+            let winners = this.users.filter(user => !user.eliminated)
+
+            if (this.users.length > 1 && winners.length === 1) {
+              this.$emit('handleWinner', winners[0].id)
+            }
+          })
           .catch(error => this.errorText = error.text)
-          .finally(() => setTimeout(() => this.pollUsers(), 5 * 1000))
+          .finally(() => setTimeout(() => this.pollUsers(), 1000))
     },
   },
 }

@@ -2,6 +2,7 @@
   <v-app>
     <AppBar
         :user="user"
+        @handleWinner="winner = $event"
     />
     <v-main>
       <Hero
@@ -33,7 +34,6 @@
       />
     </v-main>
     <Footer
-        :timestamp="timestamp"
         :countdown="countdown"
         :user="user"
     />
@@ -68,21 +68,23 @@ export default {
 
   data: () => ({
 
+    winner: null,
+
     errorText: null,
 
-    timestamp: null,
     countdown: false,
 
     // item (aka Challenge)
     index: -1,
     item: null,
     itemOpen: null,
-    itemClose: null,
     answer: null,
 
     user: {
+      name: null,
       token: null,
-      result: []
+      result: [],
+      save: true, // to avoid persistence on preflight requests
     },
     session: {
       token: null,
@@ -97,23 +99,58 @@ export default {
     progressText: null,
   }),
 
-  mounted() {
-    this.updateTimestamp()
+  watch: {
+    item() {
+      this.countdown = !!this.item
+    },
+    snackbarText() {
+      this.snackbarVisible = true
+    },
+    progressText() {
+      this.progressVisible = !!this.progressText
+    },
+    winner() {
+      if (this.winner === this.user.id) {
+        this.snackbarText = 'Congrats ... you have won the Quivlet Trivia Contest!'
+        this.item = null
+        this.hero = true
+      }
+    },
   },
 
   methods: {
 
-    updateTimestamp() {
-      this.timestamp = moment().format("M/D/YY h:mm:ss")
-      setTimeout(() => this.updateTimestamp(), 1000);
+    resetContest() {
+
+      // "pages"
+      this.challenge = false
+      this.hero = true
+
+      // dialogs
+      this.progressText = null
+      this.snackbarText = null
+
+      // challenge data
+      this.index = -1
+      this.countdown = false
+      this.winner = null
+
+      // entities
+      this.user = {
+        token: null,
+        result: [],
+        save: true, // to avoid persistence on preflight requests
+      }
+      this.session = {
+        token: null,
+      }
+      this.item = null
     },
 
     registerUser() {
-      this.user.save = true
-      this.progressVisible = true
       this.progressText = 'Configuring your Quivlet user ...';
       axios
-          .post(userUrl+'?new=id', this.user, {})
+          .post(userUrl + '?new=id', this.user, {})
           .then(result => this.user = result.data)
           .catch(error => this.errorText = error.text)
           .finally(() => this.findContest())
@@ -129,99 +166,82 @@ export default {
     },
 
     handleStart() {
-      this.itemOpen = moment.unix(this.session.expiry)
 
       this.progressText = 'Standby - starting shortly ... '
-      let diff = this.itemOpen.diff(moment(), 'milliseconds')
+
+      let expiry = moment.unix(this.session.expiry)
+      let diff = expiry.diff(moment(), 'milliseconds')
 
       if (diff > 60 * 1000) {
         setTimeout(() => this.findContest(), 5 * 1000)
       } else {
-        this.progressText = `Standby - Starting ${this.itemOpen.fromNow()}`
+        this.progressText = `Standby - Starting ${expiry.fromNow()}`
         setTimeout(() => this.fetchChallenge(), diff)
       }
     },
 
     fetchChallenge() {
-      this.progressVisible = false
+
+      if (this.winner !== null) {
+        return
+      }
+
+      this.index = this.index + 1
+      this.progressText = null
+      this.item = null
+
       axios
-          .post(itemUrl, {token: this.user.token, index: this.index + 1}, {})
-          .then(result => this.item = result.data)
+          .post(itemUrl, {token: this.user.token, index: this.index}, {})
+          .then(result => {
+            this.item = result.data
+            setTimeout(() => this.fetchSolution(), 10 * 1000)
+          })
           .catch(error => this.errorText = error.text)
-          .then(() => this.countdown = true)
-          .finally(() => setTimeout(() => this.fetchSolution(), 11 * 1000))
     },
 
     fetchSolution() {
+
+      if (this.winner !== null) {
+        return
+      }
 
       axios
           .post(itemUrl + '?solve=this', this.item, {})
           .then(result => {
 
-            console.log(result.data)
-            console.log(this.answer)
-            this.item = null
+            this.user.eliminated = !this.answer || this.answer !== result.data.correct_answer
 
-            if (this.answer === result.data.correct_answer) {
-              this.progressText = 'Correct! Advancing to the next round ...'
-              this.progressVisible = true
-              this.user.result.push(1000000000)
-
-            } else if (this.answer && this.answer !== result.data.correct_answer) {
-              this.snackbarText = 'Sorry ... the answer you selected was incorrect, try another contest!'
-              this.snackbarVisible = true
-              this.user.eliminated = true
-              this.hero = true
-            } else {
-              this.snackbarText = 'Oops ... looks like you forgot to answer, thanks for playing!'
-              this.snackbarVisible = true
-              this.user.eliminated = true
-              this.hero = true
-            }
-          })
-          .catch(error => this.errorText = error.text)
-          .finally(() => this.updateUser())
-    },
-
-    updateUser() {
-      console.log(this.user)
-      axios
-          .post(userUrl, this.user, {})
-          .then(result => {
-            if (!result.data.eliminated) {
-              this.checkIfWinner()
-            }
-          })
-          .catch(error => this.errorText = error.text)
-          .finally(() => {
             if (!this.user.eliminated) {
 
-              this.fetchChallenge()
-            }
-          })
-    },
+              this.progressText = 'Correct! Advancing to the next round ...'
+              this.user.result.push(this.index)
 
-    checkIfWinner() {
-      console.log(this.user)
-      axios
-          .post(userUrl + '?find=all', this.user, {})
-          .then(result => {
-            console.log(result.data)
-            if (result.data.filter(user => !user.eliminated).reduce((a, b) => a + b, 0) === 1) {
-              this.snackbarText = 'Congrats ... you have won the Quivlet Trivia Contest!'
-              this.snackbarVisible = true
-              this.challenge = false
-              this.hero = true
+              axios
+                  .post(userUrl + '?save=id', this.user, {})
+                  .catch(error => this.errorText = error.text)
+                  .finally(() => {
+                    if (this.winner === null) {
+                      this.fetchChallenge()
+                    }
+                  })
+
+            } else {
+
+              if (this.answer) {
+                this.snackbarText = 'Sorry ... the answer you selected was incorrect, try another contest!'
+              } else {
+                this.snackbarText = 'Oops ... looks like you ran out of time, thanks for playing!'
+              }
+
+              axios
+                  .post(userUrl + '?save=id', this.user, {})
+                  .catch(error => this.errorText = error.text)
+
+              setTimeout(() => this.resetContest(), 5 * 1000)
             }
           })
           .catch(error => this.errorText = error.text)
-      .finally(() => {
-        let milli = moment().add(1, 'minute').seconds(0).diff(moment(), 'milliseconds')
-        console.log(milli)
-        setTimeout(() => this.fetchChallenge(), milli)
-      })
     },
-
   },
 };
 </script>

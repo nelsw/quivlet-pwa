@@ -9,29 +9,41 @@
     <span
         class="text-h6"
         style="color: deeppink"
-        v-show="timeLimit > 0"
+        v-show="countdown && timeLimit > 1"
         v-text="timeLimit"
     />
     <v-spacer/>
     <span
-        v-text="user.name"
+        v-show="user.name"
+        v-text="`Username: ${user.name}`"
+    />
+    <v-spacer/>
+    <span
+        style="color: rgb(29, 32, 33) !important;"
+        v-text="timestamp"
     />
   </v-footer>
 </template>
 
 <script>
+import moment from "moment";
+
 export default {
   namespaced: true,
 
   props: {
     countdown: Boolean,
-    timestamp: String,
     user: Object,
   },
 
   data: () => ({
+    timestamp: null,
     timeLimit: 0,
   }),
+
+  mounted() {
+    this.updateTimestamp()
+  },
 
   watch: {
 
@@ -45,6 +57,13 @@ export default {
       if (this.timeLimit > 0) {
         setTimeout(() => this.timeLimit--, 1000);
       }
+    },
+  },
+
+  methods: {
+    updateTimestamp() {
+      this.timestamp = moment().format("M/D/YY h:mm:ss")
+      setTimeout(() => this.updateTimestamp(), 1000);
     },
   },
 }
